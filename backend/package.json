@@ -1,0 +1,19 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "koa": "^2.15.3",
+    "@koa/router": "^12.0.1",
+    "koa-bodyparser": "^4.4.1",
+    "better-sqlite3": "^11.3.0",
+    "jose": "^5.9.6"
+  },
+  "engines": { "node": ">=22" }
+}

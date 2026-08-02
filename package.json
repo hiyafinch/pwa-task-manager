@@ -1,0 +1,15 @@
+{
+  "name": "pwa-task-manager",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "test:backend": "npm run test -w backend",
+    "test:frontend": "npm run test -w frontend",
+    "build": "npm run build -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "lint": "node --check backend/src/server.js"
+  },
+  "engines": { "node": ">=22" }
+}
