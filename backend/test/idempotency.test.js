@@ -2,11 +2,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildTestApp } from "./helpers/test-app.js";
+import http from "node:http";
 
 async function request(app, method, path, { body, headers = {} } = {}) {
-  const callback = app.callback();
-  const http = await import("node:http");
-  const server = http.createServer(callback);
+  const server = http.createServer(app.callback());
   await new Promise((resolve) => server.listen(0, resolve));
   const { port } = server.address();
   const res = await fetch(`http://127.0.0.1:${port}${path}`, {
@@ -19,16 +18,28 @@ async function request(app, method, path, { body, headers = {} } = {}) {
   return { status: res.status, headers: res.headers, body: json };
 }
 
+async function loginToken(app) {
+  const res = await request(app, "POST", "/auth/login", {
+    body: { email: "demo@example.com", password: "Sprint3Demo!" },
+  });
+  return res.body.accessToken;
+}
+
 test("missing Idempotency-Key on a write returns 400", async () => {
   const { app } = buildTestApp();
-  const res = await request(app, "POST", "/api/tasks", { body: { id: "a", title: "x" } });
+  const token = await loginToken(app);
+  const res = await request(app, "POST", "/api/tasks", {
+    body: { id: "a", title: "x" },
+    headers: { Authorization: `Bearer ${token}` },
+  });
   assert.equal(res.status, 400);
 });
 
 test("replaying the same POST with the same Idempotency-Key does not create a duplicate", async () => {
   const { app, db } = buildTestApp();
+  const token = await loginToken(app);
   const task = { id: "task-1", title: "Buy milk", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
-  const headers = { "Idempotency-Key": "mut-1" };
+  const headers = { "Idempotency-Key": "mut-1", Authorization: `Bearer ${token}` };
 
   const first = await request(app, "POST", "/api/tasks", { body: task, headers });
   assert.equal(first.status, 201);
