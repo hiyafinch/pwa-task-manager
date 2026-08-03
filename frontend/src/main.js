@@ -40,3 +40,16 @@ app.addEventListener("mutation", async (event) => {
 });
 
 console.log(JSON.stringify({ event: "app.boot", ts: new Date().toISOString() }));
+
+// Service worker registration. skipWaiting() and clients.claim() run
+// unconditionally inside sw.js, see the four day scope note there.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js", { type: "module" });
+      console.log(JSON.stringify({ event: "sw.registered", scope: registration.scope }));
+    } catch (err) {
+      console.log(JSON.stringify({ event: "sw.registration.failed", message: err.message }));
+    }
+  });
+}
