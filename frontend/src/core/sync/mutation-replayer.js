@@ -80,8 +80,10 @@ export class MutationReplayer {
   }
 
   log(payload) {
-    const line = JSON.stringify({ ts: new Date().toISOString(), ...payload });
-    if (typeof this.logger.info === "function") this.logger.info(line);
-    else console.log(line);
+    if (typeof this.logger.info === "function") {
+      this.logger.info(payload);
+    } else {
+      console.log(JSON.stringify({ ts: new Date().toISOString(), ...payload }));
+    }
   }
 }

@@ -1,4 +1,6 @@
 // Generated with Claude Code - CS 3660 Sprint 3
+import { logger } from "../lib/logger.js";
+
 export const errorHandler = () => async (ctx, next) => {
   try {
     await next();
@@ -13,7 +15,7 @@ export const errorHandler = () => async (ctx, next) => {
       },
     };
     if (status >= 500) {
-      console.error(JSON.stringify({ event: "http.error", message: err.message, requestId: ctx.state.requestId }));
+      logger.error({ event: "http.error", message: err.message, requestId: ctx.state.requestId });
     }
   }
 };

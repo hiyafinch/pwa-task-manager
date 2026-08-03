@@ -16,11 +16,11 @@ export class DeadLetterChannel {
       tx.objectStore("outbox").delete(mutation.mutationId),
       tx.done,
     ]);
-    const line = JSON.stringify({ event: "sync.deadlettered", mutationId: mutation.mutationId, reason });
+    const payload = { event: "sync.deadlettered", mutationId: mutation.mutationId, reason };
     if (typeof this.logger.warn === "function") {
-      this.logger.warn(line);
+      this.logger.warn(payload);
     } else {
-      console.warn(line);
+      console.warn(JSON.stringify(payload));
     }
   }
 

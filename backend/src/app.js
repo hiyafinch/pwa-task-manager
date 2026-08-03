@@ -17,6 +17,8 @@ import { TaskRepository } from "./db/task-repository.js";
 import { TaskService } from "./services/task-service.js";
 import { lastWriteWins } from "./services/conflict-resolver.js";
 import { loadKeyStore } from "./lib/key-store.js";
+import { logger } from "./lib/logger.js";
+import { requestLogger } from "./middleware/request-logger.js";
 
 export function createApp({ db, keyStore } = {}) {
   const connection = db ?? getConnection();
@@ -24,7 +26,7 @@ export function createApp({ db, keyStore } = {}) {
   seedDemoUser(connection);
 
   const repository = new TaskRepository(connection);
-  const taskService = new TaskService(repository, lastWriteWins);
+  const taskService = new TaskService(repository, lastWriteWins, logger);
   const keys = keyStore ?? loadKeyStore();
 
   const app = new Koa();
@@ -40,6 +42,7 @@ export function createApp({ db, keyStore } = {}) {
     await next();
   });
 
+  app.use(requestLogger());
   app.use(errorHandler());
   app.use(bodyParser());
 

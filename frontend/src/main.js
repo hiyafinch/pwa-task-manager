@@ -11,6 +11,7 @@ import { DeadLetterChannel } from "./core/sync/dead-letter-channel.js";
 import { MutationReplayer } from "./core/sync/mutation-replayer.js";
 import { SyncStrategySelector } from "./core/sync/sync-strategy-selector.js";
 import { SyncStateStore } from "./core/sync-state-store.js";
+import { Logger } from "./core/logger.js";
 
 // PATTERN: Strategy (GoF) - runtime selection between IndexedDB and an
 // in-memory fallback. Chosen once, at boot, by feature detection.
@@ -21,10 +22,11 @@ const storage = hasIndexedDb ? new IdbStorage(dbPromise) : new MemoryStorage();
 const repository = new TaskLocalRepository(storage);
 const apiClient = new ApiClient({ apiBase: config.apiBase, getToken: () => localStorage.getItem("accessToken") });
 const syncState = new SyncStateStore();
+const logger = new Logger(dbPromise);
 const queue = hasIndexedDb ? new MutationQueue(dbPromise) : null;
-const deadLetter = hasIndexedDb ? new DeadLetterChannel(dbPromise) : null;
+const deadLetter = hasIndexedDb ? new DeadLetterChannel(dbPromise, logger) : null;
 const replayer = queue
-  ? new MutationReplayer({ queue, deadLetter, apiClient, syncState, repository })
+  ? new MutationReplayer({ queue, deadLetter, apiClient, syncState, repository, logger })
   : null;
 
 let syncStrategy = null;
