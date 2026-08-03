@@ -6,37 +6,61 @@ import { MemoryStorage } from "./core/storage/memory-storage.js";
 import { TaskLocalRepository } from "./core/db/repository.js";
 import { ApiClient } from "./core/api-client.js";
 import { config } from "./core/config.js";
+import { MutationQueue } from "./core/sync/mutation-queue.js";
+import { DeadLetterChannel } from "./core/sync/dead-letter-channel.js";
+import { MutationReplayer } from "./core/sync/mutation-replayer.js";
+import { SyncStrategySelector } from "./core/sync/sync-strategy-selector.js";
+import { SyncStateStore } from "./core/sync-state-store.js";
 
 // PATTERN: Strategy (GoF) - runtime selection between IndexedDB and an
 // in-memory fallback. Chosen once, at boot, by feature detection.
-function selectStorage() {
-  if (typeof indexedDB !== "undefined") {
-    return new IdbStorage(openTaskDb());
-  }
-  return new MemoryStorage();
-}
+const hasIndexedDb = typeof indexedDB !== "undefined";
+const dbPromise = hasIndexedDb ? openTaskDb() : null;
+const storage = hasIndexedDb ? new IdbStorage(dbPromise) : new MemoryStorage();
 
-const storage = selectStorage();
 const repository = new TaskLocalRepository(storage);
-const apiClient = new ApiClient({ apiBase: config.apiBase });
+const apiClient = new ApiClient({ apiBase: config.apiBase, getToken: () => localStorage.getItem("accessToken") });
+const syncState = new SyncStateStore();
+const queue = hasIndexedDb ? new MutationQueue(dbPromise) : null;
+const deadLetter = hasIndexedDb ? new DeadLetterChannel(dbPromise) : null;
+const replayer = queue
+  ? new MutationReplayer({ queue, deadLetter, apiClient, syncState, repository })
+  : null;
+
+let syncStrategy = null;
+
+async function bootSyncStrategy() {
+  if (!("serviceWorker" in navigator) || !replayer) return;
+  const registrationPromise = navigator.serviceWorker.ready;
+  syncStrategy = await SyncStrategySelector.select(registrationPromise);
+  syncStrategy.onConnectivityChange((online) => {
+    syncState.setState({ status: online ? "pending" : "offline" });
+    if (online) syncStrategy.requestSync(replayer);
+  });
+  if (navigator.onLine) syncStrategy.requestSync(replayer);
+}
 
 const app = document.querySelector("task-app");
 app.repository = repository;
+app.syncStateStore = syncState;
+app.deadLetterChannel = deadLetter;
 
-// Naive push, no queue yet. Phase 5 replaces this listener with the outbox
-// and mutation replayer; the local-first write already happened in task-app.
 app.addEventListener("mutation", async (event) => {
-  try {
-    if (event.detail.type === "create") {
-      await apiClient.createTask(event.detail.payload, event.detail.taskId);
-    } else if (event.detail.type === "update") {
-      await apiClient.updateTask(event.detail.taskId, event.detail.payload, crypto.randomUUID());
-    } else if (event.detail.type === "delete") {
-      await apiClient.deleteTask(event.detail.taskId, event.detail.payload.updatedAt, crypto.randomUUID());
-    }
-  } catch (err) {
-    console.log(JSON.stringify({ event: "sync.mutation.failed.naive", message: err.message }));
-  }
+  if (!queue) return; // MemoryStorage fallback: no durable queue, naive push only
+  const mutation = {
+    mutationId: crypto.randomUUID(),
+    type: event.detail.type,
+    taskId: event.detail.taskId,
+    payload: event.detail.payload,
+    updatedAt: event.detail.payload.updatedAt,
+  };
+  await queue.enqueue(mutation);
+  syncState.setState({ status: navigator.onLine ? "pending" : "offline", pendingCount: await queue.count() });
+  if (navigator.onLine && syncStrategy) syncStrategy.requestSync(replayer);
+});
+
+app.addEventListener("requeued", () => {
+  if (navigator.onLine && syncStrategy) syncStrategy.requestSync(replayer);
 });
 
 console.log(JSON.stringify({ event: "app.boot", ts: new Date().toISOString() }));
@@ -48,6 +72,10 @@ if ("serviceWorker" in navigator) {
     try {
       const registration = await navigator.serviceWorker.register("/sw.js", { type: "module" });
       console.log(JSON.stringify({ event: "sw.registered", scope: registration.scope }));
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data?.type === "REPLAY_OUTBOX" && replayer) replayer.replayAll();
+      });
+      await bootSyncStrategy();
     } catch (err) {
       console.log(JSON.stringify({ event: "sw.registration.failed", message: err.message }));
     }

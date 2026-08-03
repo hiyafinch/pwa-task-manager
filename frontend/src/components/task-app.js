@@ -5,10 +5,13 @@ import { TaskFactory } from "../core/task-factory.js";
 import "./task-form.js";
 import "./task-list.js";
 import "./sync-status-banner.js";
+import "./dead-letter-panel.js";
 
 export class TaskApp extends LitElement {
   static properties = {
     repository: { type: Object },
+    syncStateStore: { type: Object },
+    deadLetterChannel: { type: Object },
     tasks: { state: true },
   };
 
@@ -86,6 +89,7 @@ export class TaskApp extends LitElement {
         @task-toggle=${this.onToggle}
         @task-delete=${this.onDelete}
       ></task-list>
+      <dead-letter-panel .channel=${this.deadLetterChannel}></dead-letter-panel>
     `;
   }
 }
