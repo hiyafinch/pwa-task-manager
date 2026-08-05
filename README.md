@@ -31,10 +31,11 @@ API surface used, listed explicitly:
 
 ## Live URLs
 
-- Frontend: fill in after connecting Netlify (see `sprint3-blockers.md` in the planning folder)
-- Backend: fill in after connecting Render
-- Health endpoint: `<backend-url>/health`
+- Frontend: https://pwataskmanager.netlify.app
+- Backend: https://pwa-task-manager-backend.onrender.com
+- Health endpoint: https://pwa-task-manager-backend.onrender.com/health
 - GitHub Actions: https://github.com/hiyafinch/pwa-task-manager/actions
+- Demo video: https://youtu.be/vKa7E2ZIUAo
 
 ## Demo access
 
