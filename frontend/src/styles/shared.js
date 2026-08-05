@@ -6,7 +6,8 @@ export const sharedStyles = css`
     --bg: #0f0f11;
     --surface: #1c1c1e;
     --border: #2e2e32;
-    --text: #f2f2f2;
+    --text: #1c1c1e;
+    --text-on-dark: #f2f2f2;
     --muted: #9a9a9e;
     --accent: #4f8cff;
     --danger: #ff5c5c;
@@ -22,7 +23,7 @@ export const sharedStyles = css`
     border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--surface);
-    color: var(--text);
+    color: var(--text-on-dark);
     padding: 0.5rem 0.9rem;
   }
 
@@ -34,7 +35,7 @@ export const sharedStyles = css`
     font-family: inherit;
     background: var(--surface);
     border: 1px solid var(--border);
-    color: var(--text);
+    color: var(--text-on-dark);
     border-radius: 8px;
     padding: 0.5rem 0.7rem;
   }

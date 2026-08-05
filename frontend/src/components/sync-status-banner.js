@@ -25,6 +25,7 @@ export class SyncStatusBanner extends LitElement {
         padding: 0.5rem 0.8rem;
         border-radius: 8px;
         background: var(--surface);
+        color: var(--text-on-dark);
         border: 1px solid var(--border);
         font-size: 0.85rem;
         margin-bottom: 1rem;
