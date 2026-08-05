@@ -6,6 +6,7 @@ import "./task-form.js";
 import "./task-list.js";
 import "./sync-status-banner.js";
 import "./dead-letter-panel.js";
+import "./login-form.js";
 
 export class TaskApp extends LitElement {
   static properties = {
@@ -13,6 +14,7 @@ export class TaskApp extends LitElement {
     syncStateStore: { type: Object },
     deadLetterChannel: { type: Object },
     tasks: { state: true },
+    authenticated: { state: true },
   };
 
   static styles = [
@@ -27,6 +29,8 @@ export class TaskApp extends LitElement {
       h1 {
         font-size: 1.4rem;
         margin-bottom: 1rem;
+        color: var(--accent);
+        font-weight: 700;
       }
     `,
   ];
@@ -34,11 +38,17 @@ export class TaskApp extends LitElement {
   constructor() {
     super();
     this.tasks = [];
+    this.authenticated = !!localStorage.getItem("accessToken");
   }
 
   async connectedCallback() {
     super.connectedCallback();
-    if (this.repository) await this.refresh();
+    if (this.repository && this.authenticated) await this.refresh();
+  }
+
+  onLoginSuccess() {
+    this.authenticated = true;
+    this.refresh();
   }
 
   async refresh() {
@@ -80,6 +90,13 @@ export class TaskApp extends LitElement {
   }
 
   render() {
+    if (!this.authenticated) {
+      return html`
+        <h1>PWA Task Manager</h1>
+        <login-form @login-success=${this.onLoginSuccess}></login-form>
+      `;
+    }
+
     return html`
       <h1>PWA Task Manager</h1>
       <sync-status-banner .store=${this.syncStateStore}></sync-status-banner>
